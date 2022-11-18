@@ -2,12 +2,8 @@ library(dplyr)
 library(purrr)
 library(ggplot2)
 library(here)
-# pak::pkg_install("elipousson/mapbaltimore")
-# pak::pkg_install("elipousson/mapmaryland")
-# pak::pkg_install("elipousson/sfext")
-# pak::pkg_install("elipousson/maplayer")
-# pak::pkg_install("elipousson/esri2sf")
-# pak::pkg_install("elipousson/getdata")
+
+# See README for additional packages that must be installed
 
 # Load street data ----
 
@@ -122,6 +118,10 @@ boundary_maps <-
   group_by(buffer_dist) %>%
   group_map(
     ~ ggplot2::ggplot() +
+      # NOTE: maplayer::layer_mapbox requires a Mapbox API key set in the
+      # environment. It is free and quick to get a key online at
+      # https://account.mapbox.com/access-tokens/create and set with
+      # mapboxapi::mb_access_token()
       maplayer::layer_mapbox(
         data = bind_rows(street, .x),
         dist = 250,
