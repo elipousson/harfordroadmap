@@ -24,7 +24,7 @@ street <-
   sf::st_transform(3857)
 
 # Set buffer distances
-buffer_dist <- c(100, 250, 500)
+buffer_dist <- c(100, 250, 500, 2640)
 
 # Bufffer street centerline
 street_buffered <-
@@ -43,6 +43,18 @@ street_buffered <-
 # Add buffer_dist as a column
 street_buffered$buffer_dist <- buffer_dist
 
+street_buffered <- street_buffered %>%
+  sfext::relocate_sf_col()
+
+sfext::write_sf_ext(
+  data = street_buffered,
+  label = "Harford Road",
+  name = "Buffered",
+  filetype = "gpkg",
+  path = here("data")
+)
+
+
 # Load parcel data ----
 
 # NOTE: I commented out the function to download the data since I already cached
@@ -52,16 +64,16 @@ street_buffered$buffer_dist <- buffer_dist
 # parcels <-
 #   mapmaryland::get_parcel_data(
 #     # Use the street with the largest buffer to define the location
-#     location = street_buffered[3, ]
+#     location = filter(street_buffered, buffer_dist == max(street_buffered$buffer_dist))
 #   )
 #
-# Save parcels to GeoJSON file
+# # Save parcels to GeoJSON file
 # sfext::write_sf_ext(
 #   data = parcels,
 #   label = "Harford Road corridor",
 #   name = "Parcels",
 #   postfix = "md_imap",
-#   filetype = "geojson"
+#   filetype = "gpkg"
 # )
 
 # Read file from disk
@@ -90,13 +102,15 @@ parcel_boundary <-
       sfext::st_filter_ext(
         parcels,
         .x
-      ),
+      ) %>%
+        sf::st_make_valid(),
       name_col = NULL
     ),
     .keep = TRUE
   ) %>%
   bind_rows() %>%
-  mutate(buffer_dist = buffer_dist)
+  mutate(buffer_dist = buffer_dist) %>%
+  sfext::st_trim(mapbaltimore::baltimore_city)
 
 
 # Create a sf object with boundary around combined parcels intersecting each of the possible
@@ -105,11 +119,18 @@ area_boundary <-
   parcel_boundary %>%
   group_by(buffer_dist) %>%
   group_map(
-    ~ sfext::st_concave_hull(.x),
+    ~ sfext::st_concave_hull(sf::st_make_valid(.x)),
     .keep = TRUE
   ) %>%
   bind_rows()
 
+# sfext::write_sf_ext(
+#   area_boundary,
+#   label = "Harford Road corridor",
+#   name = "Buffered Boundary",
+#   filetype = "gpkg",
+#   path = here("data")
+# )
 
 # Create boundary maps using parcel data ----
 
